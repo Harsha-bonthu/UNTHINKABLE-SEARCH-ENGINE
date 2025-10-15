@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  rag-api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./data:/app/data
+      - vector_data:/app/vector_data
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ENVIRONMENT=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - rag-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend.html:/usr/share/nginx/html/index.html:ro
+    depends_on:
+      - rag-api
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+volumes:
+  vector_data:
+    driver: local
+
+networks:
+  rag-network:
+    driver: bridge
